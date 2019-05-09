@@ -55,7 +55,7 @@ from ELPDE import *
 ####NC3: u_{-x}(x,y) = -(1 - 2x)y(1-y) on x = 0
 ####NC4: u_{x}(x,y) = (1 - 2x)y(1-y) on x = 1
 ###USING GENERAL PDE CODE HERE
-
+'''
 xDisc = .25;  
 def g1(x,y):
      return 0.0
@@ -78,7 +78,7 @@ def g44(x,y):
 deg = 4
 terms = [[2, 0, 1.0], [0, 3, 1.0] ]
 newm = LPGenELPDE(xDisc, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0)
-
+'''
 
 #newm.write("PDE_LP11.sol")
 
@@ -132,7 +132,7 @@ newm = LPGenELPDE(xDisc, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, 1.0,
 ####BC2: u(x,y) = x(1-x) on y = 1
 ####BC3: u(x,y) = 0 on x = 0
 ####BC4: u(x,y) = 0 + 1 on x = 1
-'''
+
 xDisc = .25;  
 def g1(x,y):
      return x**2
@@ -161,5 +161,5 @@ newm = LPGenELPDE(xDisc, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, 1.0,
 newm.write("PDE_LP1A.sol")
 
 useSol(newm, .05, deg, True, "prob1ALP_plot.png", r'Computed Solution to $\Delta u = 1 - 2y$ (Prob4)')
-'''
+
 
