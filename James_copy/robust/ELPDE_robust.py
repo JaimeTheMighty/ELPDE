@@ -87,6 +87,7 @@ def get_boundary(Disc):
 # Creates the z variables， CHANGED, it is used iteratively with each scenario
     #added new input argument s, for the scenario
     #added zint, for interior
+    #OUTDATED, use two separate ones
 def get_z(m, xy, xy1, xy2, xy3, xy4, s):
     z1 = [None for l in range(len(xy1))]
     z2 = [None for l in range(len(xy2))]
@@ -115,10 +116,40 @@ def get_z(m, xy, xy1, xy2, xy3, xy4, s):
 
     return m, zint, z1, z2, z3, z4, z11, z22, z33, z44
 
+def get_z_boundary(m, xy1, xy2, xy3, xy4, s):
+    z1 = [None for l in range(len(xy1))]
+    z2 = [None for l in range(len(xy2))]
+    z3 = [None for l in range(len(xy3))]
+    z4 = [None for l in range(len(xy4))]
+    z11 = [None for l in range(len(xy1))]
+    z22 = [None for l in range(len(xy2))]
+    z33 = [None for l in range(len(xy3))]
+    z44 = [None for l in range(len(xy4))]
+
+    for l in range(len(xy1)):
+        # add upper bound, UZ1 = upper bound for z1, UZ2 etc.
+        z1[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z1_" + str(s) + "_" + str(l))
+        z2[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z2_" + str(s) + "_" + str(l))
+        z3[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z3_" + str(s) + "_" + str(l))
+        z4[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z4_" + str(s) + "_" + str(l))
+        z11[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z11_" + str(s) + "_" + str(l))
+        z22[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z22_" + str(s) + "_" + str(l))
+        z33[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z33_" + str(s) + "_" + str(l))
+        z44[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "z44_" + str(s) + "_" + str(l))
+    
+    return m, z1, z2, z3, z4, z11, z22, z33, z44
+
+def get_z_interior(m, xy):
+    zint = [None for l in range(len(xy))]
+    for l in range(len(xy)):
+        zint[l] = m.addVar(vtype = GRB.CONTINUOUS, name = "zint_" + "_" + str(l))
+    return m, zint
+
 # Computes the Laplacian on the interior, and the value and derivatives along the boundaries, CHANGED
     #added argument s, for each scenario
     #g_i and g_ii's are assumed to take in the indicator of the scenario to return different values
     #fVals is deterministic
+    #OUTDATED, use two separate ones
 def get_fg(xy, xy1, xy2, xy3, xy4, s):
     g1Vals = [g1(ele[0],ele[1], s) for ele in xy1]
     g2Vals = [g2(ele[0],ele[1], s) for ele in xy2]
@@ -131,6 +162,22 @@ def get_fg(xy, xy1, xy2, xy3, xy4, s):
     g33Vals = [g33(ele[0],ele[1], s) for ele in xy3]
     g44Vals = [g44(ele[0],ele[1], s) for ele in xy4]
     return fVals, g1Vals, g2Vals, g3Vals, g4Vals, g11Vals, g22Vals, g33Vals, g44Vals
+
+def get_f(xy):
+    fVals = [f(ele[0],ele[1]) for ele in xy]
+    return fVals
+
+def get_g(xy1, xy2, xy3, xy4, s):
+    g1Vals = [g1(ele[0],ele[1], s) for ele in xy1]
+    g2Vals = [g2(ele[0],ele[1], s) for ele in xy2]
+    g3Vals = [g3(ele[0],ele[1], s) for ele in xy3]
+    g4Vals = [g4(ele[0],ele[1], s) for ele in xy4]
+
+    g11Vals = [g11(ele[0],ele[1], s) for ele in xy1]
+    g22Vals = [g22(ele[0],ele[1], s) for ele in xy2]
+    g33Vals = [g33(ele[0],ele[1], s) for ele in xy3]
+    g44Vals = [g44(ele[0],ele[1], s) for ele in xy4]
+    return g1Vals, g2Vals, g3Vals, g4Vals, g11Vals, g22Vals, g33Vals, g44Vals
 
 # Creates the M matrix, no reason to change, the lhs coefficients are the same
 def get_M_int(ncoef, xy, deg, terms):
@@ -186,8 +233,8 @@ def PDE_const(m, xy, M, A, ncoef, deg, fVals, zint):
 # Applies Dirichlet constraint, uniform expression across all scenarios
 def new_D_const(m, xyi, A, giVals, ncoef, deg, zi):
     for l in range(len(xyi)):
-        m.addConstr(sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t - giVals[l] for t in range(ncoef[k]) ) for k in range(deg + 1)) <= zi[l] )
-        m.addConstr(-sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t + giVals[l] for t in range(ncoef[k]) ) for k in range(deg + 1)) <= zi[l] )
+        m.addConstr(sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t for t in range(ncoef[k]) ) for k in range(deg + 1))  - giVals[l] <= zi[l] )
+        m.addConstr(-sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t for t in range(ncoef[k]) ) for k in range(deg + 1))  + giVals[l] <= zi[l] )
     return m
 
 
@@ -218,8 +265,8 @@ def get_norms(m, xy1, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, s):
     return m, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44
 
 # Computes the L1 norms and enforces that they are less than norm_lim, both on the boundaries and interior
-def l1_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3, xy4, \
-                  normint, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b, norm_lim_int):
+def l1_Norm_const_b(m, z1, z2, z3, z4, z11, z22, z33, z44, xy1, xy2, xy3, xy4, \
+                  norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b):
     
     m.addConstr(sum(z1[p] for p in range(len(xy1)))*(1.0/len(xy1)) == norm1)
     m.addConstr(sum(z2[p] for p in range(len(xy2)))*(1.0/len(xy2)) == norm2)
@@ -231,8 +278,6 @@ def l1_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3
     m.addConstr(sum(z33[p] for p in range(len(xy3)))*(1.0/len(xy3)) == norm33)
     m.addConstr(sum(z44[p] for p in range(len(xy4)))*(1.0/len(xy4)) == norm44)
     
-    m.addConstr(sum(zint[p] for p in range(len(xy)))*(1.0/len(xy)) == normint)
-    
     m.addConstr(norm1 <= norm_lim_b)
     m.addConstr(norm2 <= norm_lim_b)
     m.addConstr(norm3 <= norm_lim_b)
@@ -243,12 +288,17 @@ def l1_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3
     m.addConstr(norm33 <= norm_lim_b)
     m.addConstr(norm44 <= norm_lim_b)
     
+    return m
+
+def l1_Norm_const_i(m, zint, xy, \
+                  normint, norm_lim_int):
+    m.addConstr(sum(zint[p] for p in range(len(xy)))*(1.0/len(xy)) == normint)
     m.addConstr(normint <= norm_lim_int)
     return m
 
 # Computes the L-Inf norms (max norms) and enforces that they are less than norm_lim, both on the boundaries and the interior
-def l_max_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3, xy4, \
-                     normint, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b, norm_lim_int):
+def l_max_Norm_const_b(m, z1, z2, z3, z4, z11, z22, z33, z44, xy1, xy2, xy3, xy4, \
+                      norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b):
     for p in range(len(xy1)):
         m.addConstr(z1[p] <= norm1)
         m.addConstr(z11[p] <= norm11)
@@ -261,10 +311,7 @@ def l_max_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, 
     for p in range(len(xy4)):
         m.addConstr(z4[p] <= norm4)
         m.addConstr(z44[p] <= norm44)
-    
-    for p in range(len(xy)):
-        m.addConstr(zint[p] <= normint)
-    
+
     m.addConstr(norm1 <= norm_lim_b)
     m.addConstr(norm2 <= norm_lim_b)
     m.addConstr(norm3 <= norm_lim_b)
@@ -274,34 +321,43 @@ def l_max_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, 
     m.addConstr(norm22 <= norm_lim_b)
     m.addConstr(norm33 <= norm_lim_b)
     m.addConstr(norm44 <= norm_lim_b)
+
+    
+    return m
+
+def l_max_Norm_const_i(m, zint, xy, \
+                     normint, norm_lim_int):
+    
+    for p in range(len(xy)):
+        m.addConstr(zint[p] <= normint)
     
     m.addConstr(normint <= norm_lim_int)
     
     return m
 
 # Creates the objective function, unsure of the objective function yet, needs refinement
-def createObjective(m, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44):
-    objective = LinExpr()
-    if DBC1:
-        objective.addTerms(1, norm1)
-    if DBC2:
-        objective.addTerms(1, norm2)
-    if DBC3:
-        objective.addTerms(1, norm3)
-    if DBC4:
-        objective.addTerms(1, norm4)
-        
-    if NBC1:
-        objective.addTerms(1, norm11)
-    if NBC2:
-        objective.addTerms(1, norm22)
-    if NBC3:
-        objective.addTerms(1, norm33)
-    if NBC4:
-        objective.addTerms(1, norm44)
-    
-    m.setObjective(objective)
-    return m
+#def createObjective(m, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44):
+#    objective = LinExpr()
+#    if DBC1:
+#        objective.addTerms(1, norm1)
+#    if DBC2:
+#        objective.addTerms(1, norm2)
+#    if DBC3:
+#        objective.addTerms(1, norm3)
+#    if DBC4:
+#        objective.addTerms(1, norm4)
+#        
+#    if NBC1:
+#        objective.addTerms(1, norm11)
+#    if NBC2:
+#        objective.addTerms(1, norm22)
+#    if NBC3:
+#        objective.addTerms(1, norm33)
+#    if NBC4:
+#        objective.addTerms(1, norm44)
+#    
+#    m.setObjective(objective)
+#    return m
 
 
 #New version for setting the objective, the input includes the existing objective, an update
@@ -327,7 +383,7 @@ def UpdateObjective_robust(m, objective,\
         objective.addTerms(1, norm44)
     
     m.setObjective(objective)
-    return m
+    return m, objective
               
 #####
 
@@ -380,14 +436,14 @@ NBC1, NBC2, NBC3, NBC4, l1_norm, norm_lim_b, norm_lim_int, objective):
      # m, A = get_A(m, ncoef, deg)
      
      # xy is a list of interior sample points
-     xy = get_interior(Disc)
+#     xy = get_interior(Disc)
 
      # points along y = 0, y = 1, x = 0, x = 1 respectively (for boundary conditions)
      xy1, xy2, xy3, xy4 = get_boundary(Disc)
      
      # auxiliary variables for points and derivatives along y = 0, y = 1, x = 0, x = 1 
      # and for the values on the interior
-     m, zint, z1, z2, z3, z4, z11, z22, z33, z44 = get_z(m, xy, xy1, xy2, xy3, xy4, s)
+     m, z1, z2, z3, z4, z11, z22, z33, z44 = get_z_boundary(m, xy1, xy2, xy3, xy4, s)
 
 
      
@@ -400,22 +456,24 @@ NBC1, NBC2, NBC3, NBC4, l1_norm, norm_lim_b, norm_lim_int, objective):
      # g22vals - value of the derivative along y = 1
      # g33vals - value of the derivative along x = 0
      # g44vals - value of the derivative along x = 1
-     fVals, g1Vals, g2Vals, g3Vals, g4Vals, g11Vals, g22Vals, g33Vals, g44Vals = get_fg(xy, xy1, xy2, xy3, xy4, s)
+     g1Vals, g2Vals, g3Vals, g4Vals, g11Vals, g22Vals, g33Vals, g44Vals = get_g(xy1, xy2, xy3, xy4, s)
 
      # M - Constraint matrix that can be combined with A to enforce the Laplacian constraint
-     M = get_M_int(ncoef, xy, deg, terms)
+#     M = get_M_int(ncoef, xy, deg, terms)
      
      # M11 - Constraint matrix be combined with A to enforce a Neumann BC on y = 0
      # M22 - Constraint matrix be combined with A to enforce a Neumann BC on y = 1
      # M33 - Constraint matrix be combined with A to enforce a Neumann BC on x = 0
      # M44 - Constraint matrix be combined with A to enforce a Neumann BC on x = 1
      M11, M22, M33, M44 = get_N_bc(ncoef, deg, xy1, xy2, xy3, xy4)
+     
+     
 
      # This is not needed for Dirichlet BC, as A can be combined with xy1, xy2, xy3, xy4 directly
 
      # Force the Laplacian as a constraint using M, A, zint
-     # this will be done outside the loop !!!!!!!
-     # m = PDE_const(m, xy, M, A, ncoef, deg, fVals, zint)
+     # this should be done outside the loop !!!!!!!
+#     m = PDE_const(m, xy, M, A, ncoef, deg, fVals, zint)
      
      
      # Force any desired Dirichlet BC using the corresponding xyi, A, giVals, zi
@@ -441,21 +499,22 @@ NBC1, NBC2, NBC3, NBC4, l1_norm, norm_lim_b, norm_lim_int, objective):
          m = new_N_const(m, xy4, M44, A, ncoef, deg, g44Vals, z44)
      
      # Create variables for the norms 
-     m, normint = get_norms_int(m, s)
+#     m, normint = get_norms_int(m, s)
      m, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44 = get_norms(m, xy1, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, s)
      
      # Calculate the values that the norms take, where normi is based on zi and normii is based on zii
      if l1_norm:
          # use the L1 calculation of norm
-         m = l1_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3, xy4, \
-                  normint, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b, norm_lim_int)
+         m = l1_Norm_const_b(m, z1, z2, z3, z4, z11, z22, z33, z44,  xy1, xy2, xy3, xy4, \
+                   norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b)
      else:
          # use the L-Inf calculation of norm (max norm)
-         m = l_max_Norm_const(m, zint, z1, z2, z3, z4, z11, z22, z33, z44, xy, xy1, xy2, xy3, xy4, \
-                  normint, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b, norm_lim_int)
-    
+         m = l_max_Norm_const_b(m, z1, z2, z3, z4, z11, z22, z33, z44, xy1, xy2, xy3, xy4, \
+                   norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44, norm_lim_b)
+
+
      # create an objective function by summing over the norms that correspond the boundary conditions
-     m = UpdateObjective_robust(m, objective, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44)
+     m, objective = UpdateObjective_robust(m, objective, DBC1, DBC2, DBC3, DBC4, NBC1, NBC2, NBC3, NBC4, norm1, norm2, norm3, norm4, norm11, norm22, norm33, norm44)
      
      ####update model
      m.update()
@@ -463,7 +522,7 @@ NBC1, NBC2, NBC3, NBC4, l1_norm, norm_lim_b, norm_lim_int, objective):
      #No need for optimization now
      #m.optimize()
      
-     return m
+     return m, objective
 
 '''
 This will be the main function to wrap up the scenarios.
@@ -482,8 +541,22 @@ def LPGenDEP (Disc, f, g1, g11, g2, g22, g3, g33, g4, g44, sce, deg, terms, DBC1
     objective = LinExpr()
     
     for s in sce:
-        m = LPGen_Scenario(Disc, m, s, A, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, DBC1, DBC2, DBC3, DBC4, \
+        m, objective = LPGen_Scenario(Disc, m, s, A, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, DBC1, DBC2, DBC3, DBC4, \
                        NBC1, NBC2, NBC3, NBC4, l1_norm, norm_lim_b, norm_lim_int, objective)
+    
+    xy = get_interior(Disc)
+    m, zint= get_z_interior(m, xy)
+    M = get_M_int(ncoef, xy, deg, terms)
+    fVals = get_f(xy)
+    m = PDE_const(m, xy, M, A, ncoef, deg, fVals, zint)
+    m, normint = get_norms_int(m, s)
+        # Calculate the values that the norms take, where normi is based on zi and normii is based on zii
+    if l1_norm:
+        # use the L1 calculation of norm
+        m = l1_Norm_const_i(m, zint, xy, normint, norm_lim_int)
+    else:
+        # use the L-Inf calculation of norm (max norm)
+        m = l_max_Norm_const_i(m, zint, xy, normint, norm_lim_int)
     
     
     m.update()
@@ -552,30 +625,11 @@ def evalWithA(x, y, A, deg):
 ############# Test case
      ######## For each scenario input into the gi and gii's, the output is different
 
-Disc = .05;  
+Disc = 0.05
+deg = 5
+terms = [[0,2,1.0], [2,0,1.0]]
+sce=[1,2]
 
-
-def g1(x, y, s):
-    if s==1:
-        return x**3
-    elif s==2:
-        return x**2
-def g2(x, y, s):
-    if s==1:
-        return x**3
-    elif s==2:
-        return x**2
-def g3(x, y, s):
-    if s==1:
-        return y**3
-    elif s==2:
-        return y**2
-def g4(x, y, s):
-    if s==1:
-        return y**3
-    elif s==2:
-        return y**2
- 
 def g11(x, y, s):
      return 0
 def g22(x, y, s):
@@ -586,23 +640,119 @@ def g44(x, y, s):
      return 0    
 
 
-def f(x, y):
-     return x + y
+#"""
+#Test Problem 1_1
+#"""
+#
+#Disc = .05;  
+#
+#
+#def g1(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0
+#def g2(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0
+#def g3(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0
+#def g4(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0
+# 
+#
+#def f(x, y):
+#     return -2*x*(1-x)-2*y*(1-y)
+#
+#
+#
+##Norm_lim_int set to 0
+#newm = LPGenDEP (Disc, f, g1, g11, g2, g22, g3, g33, g4, g44, sce, deg, terms, 1.0, 1.0, 1.0, 1.0, \
+#              0, 0, 0, 0, 1, 1, 0)
+#
+#newm.write("PDE_LP1_1.sol")
+#useSol(newm, Disc, deg, True, "PDE_LP1_1.png", r'Computed Solution to $\Delta u = -2x(1-x)-2y(1-y)$')
+     
+#
+#"""
+#Test Problem 1_2
+#"""
+#
+#def g1(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0.05
+#def g2(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0.05
+#def g3(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0.05
+#def g4(x, y, s):
+#    if s==1:
+#        return 0
+#    elif s==2:
+#        return 0.05
+#
+#def f(x, y):
+#     return -2*x*(1-x)-2*y*(1-y)
+#
+#
+##Norm_lim_int set to 0
+#newm = LPGenDEP (Disc, f, g1, g11, g2, g22, g3, g33, g4, g44, sce, deg, terms, 1.0, 1.0, 1.0, 1.0, \
+#              0, 0, 0, 0, 1, 1, 0)
+#
+#newm.write("PDE_LP1_2.sol")
+#useSol(newm, Disc, deg, True, "PDE_LP1_2.png", r'Computed Solution to $\Delta u = -2x(1-x)-2y(1-y)$')
+#
+"""
+Test Problem 1_3
+"""
 
-deg = 3
-terms = [[0,2,1.0], [2,0,1.0]]
-sce=[1,2]
+def g1(x, y, s):
+    if s==1:
+        return 0
+    elif s==2:
+        return 0.5*x
+def g2(x, y, s):
+    if s==1:
+        return 0
+    elif s==2:
+        return 0.5*x
+def g3(x, y, s):
+    if s==1:
+        return 0
+    elif s==2:
+        return 0.5*y
+def g4(x, y, s):
+    if s==1:
+        return 0
+    elif s==2:
+        return 0.5*y
+
+def f(x, y):
+     return -2*x*(1-x)-2*y*(1-y)
 
 
 #Norm_lim_int set to 0
 newm = LPGenDEP (Disc, f, g1, g11, g2, g22, g3, g33, g4, g44, sce, deg, terms, 1.0, 1.0, 1.0, 1.0, \
-              0, 0, 0, 0, 0, 1, 0)
+              0, 0, 0, 0, 1, 0.75, 0)
 
-newm.write("PDE_LPori.sol")
-useSol(newm, Disc, deg, True, "probori_plot.png", r'Computed Solution to $\Delta u = x + y $')
-
-
-
+newm.write("PDE_LP1_3.sol")
+useSol(newm, Disc, deg, True, "PDE_LP1_3.png", r'Computed Solution to $\Delta u = -2x(1-x)-2y(1-y)$')
 
 
 

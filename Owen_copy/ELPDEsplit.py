@@ -181,8 +181,8 @@ def D_const(m, xy1, xy2, xy3, xy4, A, g1Vals, g2Vals, g3Vals, g4Vals, ncoef, deg
 # Applies Dirichlet constraint
 def new_D_const(m, xyi, A, giVals, ncoef, deg, zi):
     for l in range(len(xyi)):
-        m.addConstr(sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t - giVals[l] for t in range(ncoef[k]) ) for k in range(deg + 1)) <= zi[l] )
-        m.addConstr(-sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t + giVals[l] for t in range(ncoef[k]) ) for k in range(deg + 1)) <= zi[l] )
+        m.addConstr(sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t  for t in range(ncoef[k]) ) for k in range(deg + 1))  - giVals[l]  <= zi[l] )
+        m.addConstr(-sum(sum( A[k][t]*(xyi[l][0]**(k-t))*xyi[l][1]**t  for t in range(ncoef[k]) ) for k in range(deg + 1)) + giVals[l] <= zi[l] )
     return m
 
 # Applies Neumann constraints - OUTDATED, use new_N_const for more control
@@ -561,7 +561,7 @@ terms = [[0,2,1.0], [2,0,1.0]]
 newm = LPGenELPDE(Disc, f, g1, g11, g2, g22, g3, g33, g4, g44, deg, terms, 1.0, 1.0, 1.0, 1.0, \
 0, 0, 0, 0, 0, 1)
 newm.write("PDE_LP1A.sol")
-useSol(newm, Disc, deg, True, "prob1ALP_plot.png", r'Computed Solution to $\Delta u = 1 - 2y$ (Prob4)')
+useSol(newm, Disc, deg, True, "prob1ALP_plot.png", r'Computed Solution to $\Delta u = x+y$ (Prob4)')
 
 
 
